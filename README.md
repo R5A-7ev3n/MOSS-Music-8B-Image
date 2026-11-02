@@ -9,9 +9,9 @@
 本镜像专为高精度的音乐理解与分析任务构建，适用于需要处理长音频、提取旋律、识别歌词及进行音乐结构分析的场景。
 
 * **基础环境**：Python 3.12 / PyTorch 2.9.1+cu128 / CUDA 12.8
+* **内置模型**：MOSS-Music-8B (Instruct 版本，已随镜像打包在系统盘)
 * **推理框架**：SGLang + FlashInfer
-* **内置模型**：MOSS-Music-8B (Instruct 版本)
-* **硬件建议**：强烈推荐 RTX 4090 / A5000 / A100。8B 模型在 FP16 精度下加载需约 17-18GB 显存，12GB 显卡（如 3080Ti）会直接 OOM（显存溢出），请务必留意。
+* **硬件建议**：强烈推荐 RTX 4090 / A5000 / A100。8B 模型在 FP16 精度下加载需约 17-18GB 显存，12GB 显卡（如 3080Ti）会直接 OOM（显存溢出）。
 
 ---
 
@@ -21,17 +21,19 @@
 
 ### 1️⃣ 确认环境与路径
 
-镜像已默认配置好环境。请先进入项目根目录，并确认模型文件存在：
+镜像已默认配置好环境，且模型已内置在系统盘中。请先进入项目根目录，确认模型文件存在：
 
 ```bash
-cd /root/autodl-tmp/MOSS-Music
+cd /root/MOSS-Music
 ls -lh ./weights/MOSS-Music-8B-Instruct/
 # 预期应看到 4 个 .safetensors 文件及 config.json 等
 ```
 
+---
+
 ### 2️⃣ 启动 SGLang 推理服务
 
-在终端中执行以下命令启动后台服务（默认使用 30000 端口，这是 SGLang 的标准端口）：
+在终端中执行以下命令启动后台服务（默认使用 30000 端口）：
 
 ```bash
 python -m sglang.launch_server \
@@ -58,7 +60,7 @@ python -m sglang.launch_server \
 在 AutoDL 的 JupyterLab 中，**新开一个终端**（不要在跑 SGLang 的那个终端里操作），执行：
 
 ```bash
-cd /root/autodl-tmp/MOSS-Music
+cd /root/MOSS-Music
 python app.py
 ```
 
@@ -68,15 +70,15 @@ python app.py
 ##### 第三步：配置 AutoDL 端口映射
 1. 回到 AutoDL 控制台，找到你的实例。
 2. 点击 **“自定义服务”** 按钮（通常在“快捷工具”区域）。
-3. 在弹出的窗口里，将端口号填入 `7860`（如果要求填写完整映射，通常是 `7860:127.0.0.1:7860`）。
+3. 在弹出的窗口里，将端口号填入 `7860`。
 4. 点击“确定”或“开启”，AutoDL 会为你生成一个可访问的外网链接。
 
 ##### 第四步：在浏览器中打开
-点击生成的链接（或复制链接到浏览器），即可打开 MOSS-Music 的网页界面。在网页里拖拽上传音频，输入你的 Prompt，就能看到分析结果了。
+点击生成的链接，即可打开 MOSS-Music 的网页界面。在网页里拖拽上传音频，输入你的 Prompt，就能看到分析结果了。
 
 > **💡 常见报错：如果网页打不开？**
 > * 检查终端是否报错（如缺少 Gradio 库，可执行 `pip install gradio` 补装）。
-> * 检查端口映射是否填写正确（必须是对应 `app.py` 启动时打印的真实端口）。
+> * 检查端口映射是否填写正确（必须是对应 `app.py` 启动时打印的真实端口，通常是 7860）。
 > * 检查是否在 AutoDL 控制台点击了“开启”映射，有时候映射需要几秒钟生效。
 
 ---
@@ -92,7 +94,7 @@ import requests
 import base64
 
 # 1. 将你的音频转为 Base64 并拼接前缀
-with open("/root/autodl-tmp/test_audio.wav", "rb") as f:
+with open("/root/test_audio.wav", "rb") as f:
     audio_b64 = base64.b64encode(f.read()).decode("utf-8")
     audio_data_uri = f"data:audio/wav;base64,{audio_b64}"
 
@@ -112,7 +114,7 @@ print(response.json().get("text"))
 
 ## 💡 常见使用流程
 
-1. 将测试音频文件上传到数据盘（如 `/root/autodl-tmp/` 目录下）。
+1. 将测试音频文件上传到系统盘（如 `/root/` 目录下，或者直接使用你上传的路径）。
 2. 启动 SGLang 服务端（使用方式二必须启动；使用方式一的 WebUI 通常也需要它提供底层推理支持）。
 3. 启动 WebUI（方式一）或使用 Python 脚本发送请求（方式二）。
 4. 在终端按 `Ctrl+C` 即可停止相应的服务或网页。
@@ -127,7 +129,6 @@ MOSS-Music 模型本身遵循 Apache 2.0 开源协议发布。本镜像仅为方
 
 ## 📌 常见问题与注意事项
 
-1. **端口映射**：使用 `app.py` (WebUI) 时，请确保在 AutoDL 控制台开启了对应的自定义服务端口（默认 `7860`），并等待链接生成。
-2. **项目路径**：本镜像所有代码均存放于 `/root/autodl-tmp/MOSS-Music` 下，模型权重位于其 `weights` 子目录中。
+1. **系统盘空间**：由于模型打包在系统盘（`/root`），系统盘初始占用较大，请勿随意重置系统。
+2. **端口映射**：使用 `app.py` (WebUI) 时，请确保在 AutoDL 控制台开启了对应的自定义服务端口（默认 7860）。
 3. **显存溢出 (OOM)**：若处理超长音频时遇到显存溢出，请尝试调低 `--mem-fraction-static` 参数。
-4. **网络问题**：如果内部代码需要联网下载资源，确保实例已开启学术加速。
